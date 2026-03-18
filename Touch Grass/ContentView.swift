@@ -15,9 +15,16 @@ struct ContentView: View {
 
 struct ForecastView: View {
     @State private var forecast: ForecastPeriod? = nil
+    @State private var location: LocationInfo? = nil
     
     var body: some View {
         VStack {
+            if let location = location {
+                Text("\(location.city), \(location.state)")
+            }
+            
+            
+            
             if let forecast = forecast {
                 Text(forecast.name)
                     .font(.largeTitle)
@@ -37,7 +44,14 @@ struct ForecastView: View {
                 
             }
         } .task {
-            forecast = await getDayForecast()
+            // Get the location.
+            location = await getLocationInfo()
+            
+            // If the forecastURL has been loaded, then request the forecast.
+            if let forecastURL = location?.forecastURL {
+                forecast = await getDayForecast(forecastURLString: forecastURL)
+            }
+            
         }
     }
 }

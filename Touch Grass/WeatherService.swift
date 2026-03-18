@@ -17,13 +17,19 @@ struct PointProperties: Codable {
     let relativeLocation: RelativeLocation
 }
 
-struct RelativeLocation: Codeable {
+struct RelativeLocation: Codable {
     let properties: RelativeLocationProperties
 }
 
-struct RelativeLocationProperties: Codeable {
+struct RelativeLocationProperties: Codable {
     let city: String
     let state: String
+}
+
+struct LocationInfo {
+    let city: String
+    let state: String
+    let forecastURL: String
 }
 
 struct NOAAForecastResponse: Codable {
@@ -46,8 +52,9 @@ struct ForecastPeriod: Codable {
 
 import Foundation
 
-func getDayForecast() async -> ForecastPeriod?{
+func getLocationInfo() async -> LocationInfo? {
     // These are the coordinates of San Diego State University.
+    
     let latitude = 32.774799;
     let longitude = -117.071869;
     
@@ -84,85 +91,63 @@ func getDayForecast() async -> ForecastPeriod?{
         }
     }
     
-    let pointResult: NOAAPointResponse
+    
     do {
-        pointResult = try JSONDecoder().decode(NOAAPointResponse.self, from: pointData)
+        let pointResult = try JSONDecoder().decode(NOAAPointResponse.self, from: pointData)
+        let pointResultProperties = pointResult.properties
+        return LocationInfo(
+            city: pointResultProperties.relativeLocation.properties.city,
+            state: pointResultProperties.relativeLocation.properties.state,
+            forecastURL: pointResultProperties.forecast)
     } catch {
-        print("Decoding error")
+        print("Decoding error for points response.")
         return nil
     }
+}
 
-    
-    // Now we are going to fetch the actual forecast.
-    let forecastURLString = pointResult.properties.forecast
-    
-    // Setting the location of the coordinates.
-    let city = pointResult.properties.relativeLocation.properties.city
-    let state = pointResult.properties.relativeLocation.properties.state
-    
+
+
+
+func getDayForecast(forecastURLString: String) async -> ForecastPeriod? {
+    // Convert the forecastURLString from string type to URL type.
     guard let forecastURL = URL(string: forecastURLString) else {
-        print("Error. Could not create URL from string: \(forecastURLString)")
+        print("Error: could not create URL from string: \(forecastURLString)")
         return nil
     }
     
+    // Forecast request variables.
     var forecastRequest = URLRequest(url: forecastURL)
-    
-    forecastRequest.setValue("application/geo+json", forHTTPHeaderField: "Accept")
-    forecastRequest.setValue("TouchGrass, test@test.com", forHTTPHeaderField: "User-Agent")
-    
     let forecastData: Data
     let forecastResponse: URLResponse
     
+    // Configurations on the forecast request.
+    forecastRequest.setValue("application/geo+json", forHTTPHeaderField: "Accept")
+    forecastRequest.setValue("TouchGrass, test@test.com", forHTTPHeaderField: "User-Agent")
+    
+   
+    
+    // Requesting the forecast.
     do {
         (forecastData, forecastResponse) = try await URLSession.shared.data(for: forecastRequest)
     } catch {
-        print("Error during second fetch")
+        print("Error: Could not request forecast.")
         return nil
     }
     
+    // HTTP Status code 200 means the request is successful.
+    // So we only want to accept HTTP status code 200.
     if let forecastHTTPResponse = forecastResponse as? HTTPURLResponse {
         if forecastHTTPResponse.statusCode != 200 {
             return nil
         }
     }
     
-    let forecastResult: NOAAForecastResponse
+    // Return the forecast if it can be decoded.
     do {
-        forecastResult = try JSONDecoder().decode(NOAAForecastResponse.self, from: forecastData)
+        let forecastResult = try JSONDecoder().decode(NOAAForecastResponse.self, from: forecastData)
+        return forecastResult.properties.periods[0]
     } catch {
         print("Decoding error for forecast.")
         return nil
     }
-    
-    // First period is today's forecast.
-    return forecastResult.properties.periods[0]
-    
-}
-
-func getWeatherIcon(from iconURLString: String) async -> UIImage? {
-    guard let iconURL = URL(string: iconURLString) else {
-        print("Error: invalid icon URL string: \(iconURLString)")
-        return nil
-    }
-    
-    var iconRequest = URLRequest(url: iconURL)
-    // NOAA requires that we declare who we are when we request something.
-    iconRequest.setValue("TouchGrass, test@test.com", forHTTPHeaderField: "User-Agent")
-    
-    let iconData: Data
-    let iconResponse: URLResponse
-    
-    do {
-        (iconData, iconResponse) = try await URLSession.shared.data(for: iconRequest)
-    } catch {
-        print("Error fetching icon: \(error)")
-        return nil
-    }
-    
-    if let httpResponse = iconResponse as? HTTPURLResponse, httpResponse.statusCode != 200 {
-            print("Expected 200 but got \(httpResponse.statusCode)")
-            return nil
-    }
-    
-    return UIImage(data: iconData)
 }
