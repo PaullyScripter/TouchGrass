@@ -19,6 +19,10 @@ struct ContentView: View {
     }
 }
 
+struct ForecastView: View {
+
+}
+
 #Preview {
     ContentView()
 }

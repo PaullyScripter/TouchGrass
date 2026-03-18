@@ -5,6 +5,9 @@
 //  Created by Lily Bozeman on 3/1/26.
 //
 
+// Importing UIKit because that's how we can save the iconImage from the forecast. 
+import UIKit
+
 struct NOAAPointResponse: Codable {
     let properties: PointProperties
 }
@@ -28,11 +31,12 @@ struct ForecastPeriod: Codable {
     let temperatureUnit: String
     let shortForecast: String
     let detailedForecast: String
+    let icon: String
 }
 
 import Foundation
 
-func getDayForecast() async {
+func getDayForecast() async -> ForecastPeriod?{
     // These are the coordinates of San Diego State University.
     let latitude = 32.774799;
     let longitude = -117.071869;
@@ -45,7 +49,7 @@ func getDayForecast() async {
     
     guard let pointURL = URL(string: pointURLString) else {
         print("Error. Could not create URL from string: \(pointURLString)")
-        return
+        return nil
     }
     
     var pointRequest = URLRequest(url: pointURL)
@@ -60,13 +64,13 @@ func getDayForecast() async {
         print("Successfully retrieved weather data from: \(pointURL)")
     } catch {
         print ("Error during fetch.")
-        return
+        return nil
     }
     
     if let httpResponse = pointResponse as? HTTPURLResponse {
         if httpResponse.statusCode != 200 {
             print("expected 200 but got \(httpResponse.statusCode)")
-            return
+            return nil
         }
     }
     
@@ -75,7 +79,7 @@ func getDayForecast() async {
         pointResult = try JSONDecoder().decode(NOAAPointResponse.self, from: pointData)
     } catch {
         print("Decoding error")
-        return
+        return nil
     }
 
     
@@ -84,7 +88,7 @@ func getDayForecast() async {
     
     guard let forecastURL = URL(string: forecastURLString) else {
         print("Error. Could not create URL from string: \(forecastURLString)")
-        return
+        return nil
     }
     
     var forecastRequest = URLRequest(url: forecastURL)
@@ -99,12 +103,12 @@ func getDayForecast() async {
         (forecastData, forecastResponse) = try await URLSession.shared.data(for: forecastRequest)
     } catch {
         print("Error during second fetch")
-        return
+        return nil
     }
     
     if let forecastHTTPResponse = forecastResponse as? HTTPURLResponse {
         if forecastHTTPResponse.statusCode != 200 {
-            return
+            return nil
         }
     }
     
@@ -113,15 +117,38 @@ func getDayForecast() async {
         forecastResult = try JSONDecoder().decode(NOAAForecastResponse.self, from: forecastData)
     } catch {
         print("Decoding error for forecast.")
-        return
+        return nil
     }
     
-    print("TODAY'S SDSU FORECAST:")
+    // First period is today's forecast.
+    return forecastResult.properties.periods[0]
     
-    let todayForecast = forecastResult.properties.periods[0]
-    print(todayForecast.name)
-    print(todayForecast.temperature)
-    print(todayForecast.shortForecast)
-    print(todayForecast.detailedForecast)
+}
 
+func getWeatherIcon(from iconURLString: String) async -> UIImage? {
+    guard let iconURL = URL(string: iconURLString) else {
+        print("Error: invalid icon URL string: \(iconURLString)")
+        return nil
+    }
+    
+    var iconRequest = URLRequest(url: iconURL)
+    // NOAA requires that we declare who we are when we request something.
+    iconRequest.setValue("TouchGrass, test@test.com", forHTTPHeaderField: "User-Agent")
+    
+    let iconData: Data
+    let iconResponse: URLResponse
+    
+    do {
+        (iconData, iconResponse) = try await URLSession.shared.data(for: iconRequest)
+    } catch {
+        print("Error fetching icon: \(error)")
+        return nil
+    }
+    
+    if let httpResponse = iconResponse as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            print("Expected 200 but got \(httpResponse.statusCode)")
+            return nil
+    }
+    
+    return UIImage(data: iconData)
 }

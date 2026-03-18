@@ -12,9 +12,6 @@ struct Touch_GrassApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .task {
-                    await getDayForecast()
-                }
         }
     }
 }
