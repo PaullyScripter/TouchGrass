@@ -5,9 +5,6 @@
 //  Created by Lily Bozeman on 3/1/26.
 //
 
-// Importing UIKit because that's how we can save the iconImage from the forecast. 
-import UIKit
-
 struct NOAAPointResponse: Codable {
     let properties: PointProperties
 }
