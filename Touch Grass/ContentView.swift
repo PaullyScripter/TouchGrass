@@ -20,51 +20,69 @@ struct ForecastView: View {
     @State private var location: LocationInfo? = nil
     
     var body: some View {
-        VStack {
+        VStack(spacing: 20) {
+            
+            Text("Touch Grass")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .padding(.top, -70)
             
             // If the location of the forecast exists, show the location.
-            if let location = location {
-                Text("\(location.city), \(location.state)")
-            }
             
-            
-            // If the forecast exists, display forecast information.
-            if let forecast = forecast {
-                // This is an icon retrieved from NOAA api.
-                AsyncImage (url: URL(string: forecast.icon)) {
-                    image in image
-                        .resizable()
-                        .scaledToFit()
-                } placeholder: {
-                    ProgressView()
+            VStack(spacing: 15) {
+                if let location = location {
+                    Text("\(location.city), \(location.state)")
                 }
+                
+                
+                // If the forecast exists, display forecast information.
+                if let forecast = forecast {
+                    // This is an icon retrieved from NOAA api.
+                    AsyncImage (url: URL(string: forecast.icon)) {
+                        image in image
+                            .resizable()
+                            .scaledToFit()
+                    } placeholder: {
+                        ProgressView()
+                    }
                     .frame(width: 100, height: 100)
                     .cornerRadius(20)
+                    
+                    // Forecast information
+                    Text(forecast.name)
+                        .font(.largeTitle)
+                    
+                    Text("High: \(forecast.temperature)°\(forecast.temperatureUnit)")
+                    
+                    Text(forecast.shortForecast)
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding()
+            .background(Color(white: 0.15))
+            .cornerRadius(20)
+
+            
+            .task (id: locationManager.location) {
+                // Get the user's current location on startup.
+                guard let cords = locationManager.location else {
+                    return
+                }
                 
-                // Forecast information
-                Text(forecast.name)
-                    .font(.largeTitle)
-                Text("High: \(forecast.temperature)°\(forecast.temperatureUnit)")
-                Text(forecast.shortForecast)
+                // Get weather station forecast of the user's location.
+                location = await getLocationInfo(latitude: cords.latitude, longitude: cords.longitude)
+                
+                // If the forecastURL has been loaded, then request the daily forecast.
+                if let forecastURL = location?.forecastURL {
+                    forecast = await getDayForecast(forecastURLString: forecastURL)
+                }
+                
             }
-        } .task (id: locationManager.location) {
-            // Get the user's current location on startup.
-            guard let cords = locationManager.location else {
-                return
-            }
-            
-            // Get weather station forecast of the user's location.
-            location = await getLocationInfo(latitude: cords.latitude, longitude: cords.longitude)
-            
-            // If the forecastURL has been loaded, then request the daily forecast.
-            if let forecastURL = location?.forecastURL {
-                forecast = await getDayForecast(forecastURLString: forecastURL)
-            }
-            
         }
     }
-}
-
-#Preview {
-    ContentView()
+    
+    #Preview {
+        ContentView()
+    }
 }
