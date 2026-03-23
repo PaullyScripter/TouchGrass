@@ -2,11 +2,12 @@
 //  ForecastView.swift
 //  Touch Grass
 //
+//
+
 
 import SwiftUI
 import CoreLocation
 
-// This is a view that contains all of our forecast display.
 struct ForecastView: View {
     // State variables to hold our current forecast.
     @State private var locationManager = LocationManager()
@@ -26,6 +27,7 @@ struct ForecastView: View {
             VStack(spacing: 15) {
                 if let location = location {
                     Text("\(location.city), \(location.state)")
+                        .foregroundColor(.secondary)
                 }
                 
                 
@@ -45,8 +47,10 @@ struct ForecastView: View {
                     // Forecast information
                     Text(forecast.name)
                         .font(.largeTitle)
+                        .foregroundColor(.primary)
                     
                     Text("High: \(forecast.temperature)°\(forecast.temperatureUnit)")
+                        .foregroundColor(.primary)
                     
                     Text(forecast.shortForecast)
                         .font(.title3)
@@ -54,7 +58,7 @@ struct ForecastView: View {
                 }
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Color(uiColor: .secondarySystemBackground))
             .cornerRadius(20)
             
             .task (id: locationManager.location) {
@@ -85,4 +89,3 @@ struct ForecastView: View {
 #Preview {
     ForecastView()
 }
-
