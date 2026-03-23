@@ -10,14 +10,10 @@ import CoreLocation
 
 struct ForecastView: View {
     @Environment(WeatherStore.self) private var store
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(spacing: 20) {
-            
-            Text("Touch Grass")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .padding(.top, -70)
             
             // If the location of the forecast exists, show the location.
             

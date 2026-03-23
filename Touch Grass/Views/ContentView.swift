@@ -10,14 +10,26 @@ struct ContentView: View {
     @State private var isMenuOpen = false
     @AppStorage("isDarkMode") private var isDarkMode = true
     @State private var weatherStore = WeatherStore()
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         NavigationStack {
             ZStack {
+                // Background image (bottom layer)
+                GeometryReader { geometry in
+                    Image(colorScheme == .dark ? "Background_Night" : "Background_Sunny")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipped()
+                }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                
                 // Main content
                 ForecastView()
                 
-                // Slide-out menu
+                // Slide-out menu (top layer )
                 SideMenu(isOpen: $isMenuOpen)
             }
             .toolbar {
@@ -31,6 +43,7 @@ struct ContentView: View {
                             .font(.title2)
                             .foregroundColor(.primary)
                     }
+                    .zIndex(1000)  // Ensure button is always on top
                 }
             }
         }
@@ -39,6 +52,7 @@ struct ContentView: View {
         .task(id: weatherStore.locationManager.location) {
             await weatherStore.load()
         }
+        
     }
 }
 
@@ -57,10 +71,11 @@ struct SideMenu: View {
                             isOpen = false
                         }
                     }
+                    .zIndex(999)  // Overlay just below the menu
             }
             
             // Menu panel
-            HStack {
+            HStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
                     // Menu Header
                     VStack(alignment: .leading, spacing: 8) {
@@ -121,10 +136,11 @@ struct SideMenu: View {
                 }
                 .frame(width: 280)
                 .background(Color(uiColor: .systemBackground))
-                .offset(x: isOpen ? 0 : -280)
                 
-                Spacer()
+                Spacer(minLength: 0)
             }
+            .offset(x: isOpen ? 0 : -280)
+            .zIndex(1000)  // Menu on top of everything
         }
     }
 }
